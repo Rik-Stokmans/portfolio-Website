@@ -38,8 +38,8 @@
   /* Glass button — hover feedback via CSS so it doesn't fight the magnetic cursor */
   .glass-button {
     background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: brightness(1.1) blur(1px) url(#lg-btn);
+    -webkit-backdrop-filter: brightness(1.1) blur(1px) url(#lg-btn);
     border: 1px solid rgba(255, 255, 255, 0.4);
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.04),
@@ -49,6 +49,8 @@
 
   .glass-button:hover {
     background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: brightness(1.15) blur(1px) url(#lg-btn);
+    -webkit-backdrop-filter: brightness(1.15) blur(1px) url(#lg-btn);
     box-shadow:
       0 12px 40px rgba(0, 0, 0, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -180,7 +182,6 @@
   }
 
   /* Remove hover effects */
-  .liquid-glass-card::before,
   .liquid-glass-card::after {
     display: none !important;
   }
