@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import type { Project } from "@/lib/projects";
 import TechPill from "./TechPill";
@@ -45,6 +46,13 @@ export default function ProjectOverlay({
   project,
   onClose,
 }: ProjectOverlayProps) {
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   return (
     <>
       {/* Backdrop */}
