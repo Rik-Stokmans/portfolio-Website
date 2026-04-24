@@ -5,6 +5,10 @@
     cursor: none !important;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: #ffffff;
     min-height: 100vh;
@@ -12,6 +16,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+  }
+
+  /* Offset anchor scroll targets so the sticky navbar doesn't cover them */
+  section[id] {
+    scroll-margin-top: 80px;
   }
 }
 
@@ -52,46 +61,71 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
 
-  /* Liquid glass card — refraction via SVG displacement filter + edge highlights */
+  /* ── Liquid Glass Card ───────────────────────────────────────────────
+     Two-layer approach:
+     - ::before  → backdrop blur + SVG displacement filter (the "glass pane")
+     - ::after   → gradient border for edge refraction highlight
+     - element   → specular top highlight via box-shadow, transparent bg
+  ──────────────────────────────────────────────────────────────────── */
   .liquid-glass-card {
-    background: rgba(255, 255, 255, 0.18);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: url(#liquid-glass);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
     box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.05),
-      inset 0 1px 0 rgba(255, 255, 255, 0.9),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+      0 8px 32px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.2);
     position: relative;
+    isolation: isolate;
   }
 
-  /* Specular edge highlight — simulates light hitting curved glass surface */
+  /* Glass pane: backdrop blur + saturation + lens displacement */
   .liquid-glass-card::before {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background: linear-gradient(
-      165deg,
-      rgba(255, 255, 255, 0.5) 0%,
-      rgba(255, 255, 255, 0.15) 20%,
-      transparent 45%,
-      transparent 80%,
-      rgba(255, 255, 255, 0.08) 100%
-    );
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%) url(#liquid-glass);
+    z-index: -1;
     pointer-events: none;
-    z-index: 1;
   }
 
-  /* Subtle inner edge glow on hover */
-  .liquid-glass-card:hover::before {
+  /* Edge refraction highlight — gradient visible only in the border ring */
+  .liquid-glass-card::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1.5px;
     background: linear-gradient(
-      165deg,
-      rgba(255, 255, 255, 0.65) 0%,
-      rgba(255, 255, 255, 0.2) 20%,
-      transparent 45%,
-      transparent 80%,
-      rgba(255, 255, 255, 0.12) 100%
+      160deg,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 255, 255, 0.35) 25%,
+      rgba(255, 255, 255, 0.08) 55%,
+      rgba(255, 255, 255, 0.15) 80%,
+      rgba(255, 255, 255, 0.5) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Hover: brighter edge highlight + lift shadow */
+  .liquid-glass-card:hover::after {
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 1) 0%,
+      rgba(255, 255, 255, 0.5) 25%,
+      rgba(255, 255, 255, 0.12) 55%,
+      rgba(255, 255, 255, 0.2) 80%,
+      rgba(255, 255, 255, 0.65) 100%
     );
   }
 }
@@ -99,4 +133,44 @@
 @keyframes bounce-subtle {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(6px); }
+}
+
+@media print {
+  /* Hide interactive/decorative elements */
+  nav,
+  canvas,
+  [class*="cursor"],
+  [class*="scroll-indicator"],
+  [class*="ScrollIndicator"],
+  button[data-magnetic] {
+    display: none !important;
+  }
+
+  /* Reset backgrounds for print legibility */
+  body {
+    background: white !important;
+    color: #0f172a !important;
+  }
+
+  .glass,
+  .glass-button,
+  .liquid-glass-card {
+    background: white !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure all sections print */
+  section {
+    padding: 2rem 1.5rem !important;
+    page-break-inside: avoid;
+  }
+
+  /* Remove hover effects */
+  .liquid-glass-card::before,
+  .liquid-glass-card::after {
+    display: none !important;
+  }
 }

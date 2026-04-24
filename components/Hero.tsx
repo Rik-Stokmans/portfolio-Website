@@ -54,6 +54,15 @@ export default function Hero() {
         >
           Based in the Netherlands.
         </motion.p>
+        <motion.div variants={item} className="mt-10">
+          <button
+            onClick={() => window.print()}
+            className="glass-button rounded-xl px-6 py-3 text-sm font-medium text-slate-700"
+            data-magnetic
+          >
+            Download CV
+          </button>
+        </motion.div>
       </motion.div>
       <ScrollIndicator />
     </section>

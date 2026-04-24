@@ -20,6 +20,9 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
         willChange: "transform",
         backfaceVisibility: "hidden",
       }}
+      animate={{
+        boxShadow: "0 8px 32px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.85), inset 0 -1px 0 rgba(255,255,255,0.2)",
+      }}
       whileHover={{
         y: -6,
         boxShadow:
@@ -32,7 +35,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
       transition={{
         layout: { type: "spring", stiffness: 220, damping: 28 },
         y: { type: "spring", stiffness: 300, damping: 22 },
-        boxShadow: { duration: 0.3 },
+        boxShadow: { duration: 0.25, ease: "easeOut" },
         scale: { type: "spring", stiffness: 400, damping: 25 },
       }}
     >
@@ -48,7 +51,7 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
           <p className="mt-1.5 text-sm text-slate-500 leading-relaxed line-clamp-2">
             {project.description}
           </p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
             {project.tech.slice(0, 3).map((t) => (
               <TechPill key={t} label={t} />
             ))}

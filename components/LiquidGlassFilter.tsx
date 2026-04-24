@@ -1,44 +1,74 @@
 "use client";
 
-/**
- * Renders a hidden SVG with filter definitions for the liquid glass refraction effect.
- * Uses feDisplacementMap with separate horizontal/vertical gradient maps
- * to create a proper lens-like distortion (content bends inward at edges).
- *
- * Include once in the layout; reference via backdrop-filter: url(#liquid-glass).
- */
-export default function LiquidGlassFilter() {
-  // Horizontal displacement map — varies R channel left-to-right
-  // Bright left (pull content right → toward center) → neutral center → dark right (pull content left → toward center)
-  // Flat zone in center (35%–65%) keeps central content undistorted
-  const hMap = encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">' +
-      "<defs>" +
-      '<linearGradient id="h" x1="0" x2="1" y1="0" y2="0">' +
-      '<stop offset="0%" stop-color="rgb(168,0,0)"/>' +
-      '<stop offset="35%" stop-color="rgb(128,0,0)"/>' +
-      '<stop offset="65%" stop-color="rgb(128,0,0)"/>' +
-      '<stop offset="100%" stop-color="rgb(88,0,0)"/>' +
-      "</linearGradient>" +
-      "</defs>" +
-      '<rect width="200" height="200" fill="url(#h)"/>' +
-      "</svg>"
-  );
+import { useEffect, useState } from "react";
 
-  // Vertical displacement map — varies G channel top-to-bottom
-  const vMap = encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">' +
-      "<defs>" +
-      '<linearGradient id="v" x1="0" x2="0" y1="0" y2="1">' +
-      '<stop offset="0%" stop-color="rgb(0,168,0)"/>' +
-      '<stop offset="35%" stop-color="rgb(0,128,0)"/>' +
-      '<stop offset="65%" stop-color="rgb(0,128,0)"/>' +
-      '<stop offset="100%" stop-color="rgb(0,88,0)"/>' +
-      "</linearGradient>" +
-      "</defs>" +
-      '<rect width="200" height="200" fill="url(#v)"/>' +
-      "</svg>"
-  );
+/**
+ * Generates a lens displacement map PNG via canvas:
+ *  - R channel encodes horizontal displacement (bright left → neutral center → dark right)
+ *  - G channel encodes vertical displacement (bright top → neutral center → dark bottom)
+ *  - Flat neutral zone in center (30%–70%) keeps central content undistorted
+ *  - Edges ramp smoothly with eased falloff for organic glass look
+ *
+ * Returns a base64 data URL for use in feImage.
+ */
+function generateLensMap(): string {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const img = ctx.createImageData(size, size);
+  const d = img.data;
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const nx = x / (size - 1); // 0→1 left to right
+      const ny = y / (size - 1); // 0→1 top to bottom
+
+      // Horizontal displacement (R channel)
+      // Left edge: bright (>128) → pulls sampled pixels rightward (content appears shifted left → toward center)
+      // Right edge: dark (<128) → pulls sampled pixels leftward (content appears shifted right → toward center)
+      let r = 128;
+      if (nx < 0.3) {
+        const t = 1 - nx / 0.3; // 1 at edge, 0 at 30%
+        const eased = t * t * (3 - 2 * t); // smoothstep
+        r = 128 + eased * 40;
+      } else if (nx > 0.7) {
+        const t = (nx - 0.7) / 0.3; // 0 at 70%, 1 at edge
+        const eased = t * t * (3 - 2 * t);
+        r = 128 - eased * 40;
+      }
+
+      // Vertical displacement (G channel) — same logic
+      let g = 128;
+      if (ny < 0.3) {
+        const t = 1 - ny / 0.3;
+        const eased = t * t * (3 - 2 * t);
+        g = 128 + eased * 40;
+      } else if (ny > 0.7) {
+        const t = (ny - 0.7) / 0.3;
+        const eased = t * t * (3 - 2 * t);
+        g = 128 - eased * 40;
+      }
+
+      const i = (y * size + x) * 4;
+      d[i] = Math.round(r);
+      d[i + 1] = Math.round(g);
+      d[i + 2] = 128; // B — unused
+      d[i + 3] = 255; // A — fully opaque
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+export default function LiquidGlassFilter() {
+  const [mapUrl, setMapUrl] = useState("");
+
+  useEffect(() => {
+    setMapUrl(generateLensMap());
+  }, []);
 
   return (
     <svg
@@ -48,7 +78,13 @@ export default function LiquidGlassFilter() {
       aria-hidden="true"
     >
       <defs>
-        {/* Main liquid glass filter — lens refraction + subtle blur */}
+        {/*
+          liquid-glass filter pipeline:
+          1. feImage — loads the canvas-generated lens displacement map (PNG)
+          2. feDisplacementMap — warps backdrop pixels using R/G channels
+             (content bends inward at all four edges, undistorted in center)
+          3. feGaussianBlur — light frosted glass softening
+        */}
         <filter
           id="liquid-glass"
           x="-5%"
@@ -57,58 +93,29 @@ export default function LiquidGlassFilter() {
           height="110%"
           colorInterpolationFilters="sRGB"
         >
-          {/* Load horizontal gradient (R channel encodes X displacement) */}
-          <feImage
-            href={`data:image/svg+xml,${hMap}`}
-            result="hmap"
-            preserveAspectRatio="none"
-          />
-          {/* Load vertical gradient (G channel encodes Y displacement) */}
-          <feImage
-            href={`data:image/svg+xml,${vMap}`}
-            result="vmap"
-            preserveAspectRatio="none"
-          />
+          {/* Displacement map (or neutral fallback before canvas generates) */}
+          {mapUrl ? (
+            <feImage
+              href={mapUrl}
+              result="map"
+              preserveAspectRatio="none"
+            />
+          ) : (
+            <feFlood floodColor="rgb(128,128,128)" result="map" />
+          )}
 
-          {/* Extract R from hmap, zero out G */}
-          <feColorMatrix
-            in="hmap"
-            type="matrix"
-            values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"
-            result="rChannel"
-          />
-          {/* Extract G from vmap, zero out R */}
-          <feColorMatrix
-            in="vmap"
-            type="matrix"
-            values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"
-            result="gChannel"
-          />
-
-          {/* Combine: R from hmap + G from vmap into one displacement map */}
-          <feComposite
-            in="rChannel"
-            in2="gChannel"
-            operator="arithmetic"
-            k1="0"
-            k2="1"
-            k3="1"
-            k4="0"
-            result="displacement"
-          />
-
-          {/* Apply lens distortion */}
+          {/* Lens distortion: edges refract inward, center is clean */}
           <feDisplacementMap
             in="SourceGraphic"
-            in2="displacement"
-            scale="35"
+            in2="map"
+            scale="55"
             xChannelSelector="R"
             yChannelSelector="G"
             result="refracted"
           />
 
-          {/* Very light blur for frosted glass feel */}
-          <feGaussianBlur in="refracted" stdDeviation="1.2" />
+          {/* Frosted-glass softening */}
+          <feGaussianBlur in="refracted" stdDeviation="3" />
         </filter>
       </defs>
     </svg>

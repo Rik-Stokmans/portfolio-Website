@@ -40,6 +40,8 @@ export default function Navbar() {
         </Link>
         <div className="flex gap-6">
           <NavLink href="#projects">Projects</NavLink>
+          <NavLink href="#career">Career</NavLink>
+          <NavLink href="#skills">Skills</NavLink>
           <NavLink href="#contact">Contact</NavLink>
         </div>
       </div>

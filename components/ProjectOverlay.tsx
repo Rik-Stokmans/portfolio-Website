@@ -109,7 +109,7 @@ export default function ProjectOverlay({
               className="mt-8 flex flex-wrap gap-2"
             >
               {project.tech.map((t) => (
-                <TechPill key={t} label={t} />
+                <TechPill key={t} label={t} interactive />
               ))}
             </motion.div>
 

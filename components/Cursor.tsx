@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 const CURSOR_SIZE = 20;
-const PULL_STRENGTH = 0.3;
+const PULL_STRENGTH = 0.15;
 const BUTTON_SCALE = 1.05;
 const MORPH_IN_SPEED = 0.35;
 const MORPH_OUT_SPEED = 0.12;
@@ -16,6 +16,7 @@ export default function Cursor() {
   const mouseRef = useRef({ x: -100, y: -100 });
   const activeElRef = useRef<HTMLElement | null>(null);
   const morphRef = useRef(0);
+  const enterTimeRef = useRef<number>(0);
   // Track the element that was just left so we can spring it back
   const springElRef = useRef<HTMLElement | null>(null);
   const springPullRef = useRef({ x: 0, y: 0, scale: 1 });
@@ -49,6 +50,7 @@ export default function Cursor() {
           springElRef.current = null;
         }
         activeElRef.current = mag;
+        enterTimeRef.current = performance.now();
       }
     }
 
@@ -79,8 +81,13 @@ export default function Cursor() {
         const elCx = rect.left + rect.width / 2;
         const elCy = rect.top + rect.height / 2;
 
-        const pullX = (mx - elCx) * PULL_STRENGTH;
-        const pullY = (my - elCy) * PULL_STRENGTH;
+        const elapsed = performance.now() - enterTimeRef.current;
+        const easeProgress = Math.min(1, elapsed / 350);
+        // Apply cubic ease-out: t => 1 - (1-t)^3
+        const easedT = 1 - Math.pow(1 - easeProgress, 3);
+
+        const pullX = (mx - elCx) * PULL_STRENGTH * easedT;
+        const pullY = (my - elCy) * PULL_STRENGTH * easedT;
         el.style.transition = "none";
         el.style.transform = `translate(${pullX}px, ${pullY}px) scale(${BUTTON_SCALE})`;
 
