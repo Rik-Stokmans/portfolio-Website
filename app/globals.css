@@ -62,84 +62,15 @@
   }
 
   /* ── Liquid Glass Card ───────────────────────────────────────────────
-     Two-layer approach:
-     - ::before  → backdrop blur + SVG displacement filter (the "glass pane")
-     - ::after   → gradient border for edge refraction highlight
-     - element   → specular top highlight via box-shadow, transparent bg
-  ──────────────────────────────────────────────────────────────────── */
-  .liquid-glass-card {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1.5px solid rgba(255, 255, 255, 0.45);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.85),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.2);
-    position: relative;
-    isolation: isolate;
-  }
-
-  /* Glass pane: backdrop blur + saturation + lens displacement */
-  .liquid-glass-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%) url(#liquid-glass);
-    z-index: -1;
-    pointer-events: none;
-  }
-
-  /* Edge refraction highlight — gradient visible only in the border ring */
-  .liquid-glass-card::after {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1.5px;
-    background: linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.85) 0%,
-      rgba(255, 255, 255, 0.35) 25%,
-      rgba(255, 255, 255, 0.08) 55%,
-      rgba(255, 255, 255, 0.15) 80%,
-      rgba(255, 255, 255, 0.5) 100%
-    );
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    mask-composite: exclude;
-    pointer-events: none;
-    z-index: 2;
-  }
-
-  /* Hover: brighter edge highlight + lift shadow */
-  .liquid-glass-card:hover::after {
-    background: linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 1) 0%,
-      rgba(255, 255, 255, 0.5) 25%,
-      rgba(255, 255, 255, 0.12) 55%,
-      rgba(255, 255, 255, 0.2) 80%,
-      rgba(255, 255, 255, 0.65) 100%
-    );
-  }
-
-  /* ── Liquid Glass Card ───────────────────────────────────────────────
-     Three-layer approach:
-     - ::before  → SVG lens displacement filter applied to the card content
-                   (filter: url(#liquid-glass) works on element, not backdrop)
-     - ::after   → gradient border for edge refraction / specular highlight
-     - element   → frosted backdrop blur + semi-transparent base
+     feTurbulence backdrop-filter approach:
+     backdrop-filter references #lg-card SVG filter, distorting background
+     content seen through the glass — authentic light refraction.
+     ::after provides specular gradient border highlight.
   ──────────────────────────────────────────────────────────────────── */
   .liquid-glass-card {
     background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(28px) saturate(200%) brightness(1.05);
-    -webkit-backdrop-filter: blur(28px) saturate(200%) brightness(1.05);
+    backdrop-filter: brightness(1.12) saturate(180%) blur(1px) url(#lg-card);
+    -webkit-backdrop-filter: brightness(1.12) saturate(180%) blur(1px) url(#lg-card);
     border: 1.5px solid rgba(255, 255, 255, 0.5);
     box-shadow:
       0 8px 40px rgba(0, 0, 0, 0.08),
@@ -149,26 +80,6 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
-  }
-
-  /*
-    Lens distortion layer — applies the SVG displacement filter to a
-    semi-transparent overlay so the refraction bends the card's own
-    backdrop content rather than disappearing behind it.
-    Note: SVG filter url() is NOT supported in backdrop-filter; we apply
-    it via the regular `filter` property on a pseudo-element overlay that
-    sits above the blurred background but below card content.
-  */
-  .liquid-glass-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    /* Light frosted glass tint — the SVG filter warps this layer */
-    background: rgba(240, 245, 255, 0.10);
-    filter: url(#liquid-glass);
-    z-index: 0;
-    pointer-events: none;
   }
 
   /* Specular highlight — gradient border ring that simulates light refraction */
@@ -205,11 +116,11 @@
     z-index: 1;
   }
 
-  /* Hover: stronger specular + lift */
+  /* Hover: stronger refraction + lift */
   .liquid-glass-card:hover {
     background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(32px) saturate(220%) brightness(1.08);
-    -webkit-backdrop-filter: blur(32px) saturate(220%) brightness(1.08);
+    backdrop-filter: brightness(1.15) saturate(220%) blur(1px) url(#lg-card);
+    -webkit-backdrop-filter: brightness(1.15) saturate(220%) blur(1px) url(#lg-card);
     box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.12),
       0 4px 12px rgba(0, 0, 0, 0.06),
