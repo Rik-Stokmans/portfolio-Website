@@ -3,23 +3,23 @@
 import { motion } from "framer-motion";
 
 const hardSkills = [
-  { name: "TypeScript", level: 95 },
-  { name: "React / Next.js", level: 92 },
-  { name: "Go", level: 80 },
-  { name: "Python", level: 85 },
-  { name: "Node.js", level: 88 },
-  { name: "PostgreSQL", level: 78 },
-  { name: "Docker", level: 75 },
-  { name: "Redis", level: 72 },
+  { name: "TypeScript", level: 90 },
+  { name: "React / Next.js", level: 88 },
+  { name: "Tailwind CSS", level: 85 },
+  { name: "Framer Motion", level: 80 },
+  { name: "Node.js", level: 75 },
+  { name: "Python", level: 70 },
+  { name: "Go", level: 62 },
+  { name: "PostgreSQL", level: 68 },
 ];
 
 const softSkills = [
   "Problem solving",
-  "Technical communication",
+  "Attention to detail",
   "Self-directed learning",
-  "Code review & mentoring",
-  "System design",
-  "Cross-functional collaboration",
+  "UI / UX intuition",
+  "Clean code mindset",
+  "Adaptability",
 ];
 
 export default function Skills() {
