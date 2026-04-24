@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import DotGrid from "@/components/DotGrid";
 import Cursor from "@/components/Cursor";
+import LiquidGlassFilter from "@/components/LiquidGlassFilter";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans`}>
+        <LiquidGlassFilter />
         <DotGrid />
         <div className="relative" style={{ zIndex: 1 }}>
           {children}

@@ -2,13 +2,13 @@
 
 import { useEffect, useRef } from "react";
 
-// iPadOS-style cursor:
-// - Free: small translucent circle follows mouse
-// - On magnetic button: cursor morphs to button's exact shape, becomes a
-//   subtle highlight that wraps around the button. The button text remains
-//   visible because we use mix-blend-mode. Button follows mouse magnetically.
-
 const CURSOR_SIZE = 20;
+const PULL_STRENGTH = 0.3;
+const BUTTON_SCALE = 1.05;
+const MORPH_IN_SPEED = 0.35;
+const MORPH_OUT_SPEED = 0.12;
+// How quickly the button springs back after mouse leaves (0–1 per frame)
+const SPRING_BACK_SPEED = 0.08;
 
 export default function Cursor() {
   const outerRef = useRef<HTMLDivElement>(null);
@@ -16,6 +16,9 @@ export default function Cursor() {
   const mouseRef = useRef({ x: -100, y: -100 });
   const activeElRef = useRef<HTMLElement | null>(null);
   const morphRef = useRef(0);
+  // Track the element that was just left so we can spring it back
+  const springElRef = useRef<HTMLElement | null>(null);
+  const springPullRef = useRef({ x: 0, y: 0, scale: 1 });
 
   useEffect(() => {
     const outer = outerRef.current;
@@ -25,18 +28,40 @@ export default function Cursor() {
       mouseRef.current = { x: e.clientX, y: e.clientY };
     }
 
-    function onEnterMagnetic(e: Event) {
-      activeElRef.current = e.currentTarget as HTMLElement;
+    function getMagnetic(target: EventTarget | null): HTMLElement | null {
+      let el = target as HTMLElement | null;
+      while (el && el !== document.body) {
+        if (
+          el.hasAttribute("data-magnetic") ||
+          el.tagName === "BUTTON" ||
+          (el.tagName === "A" && el.closest("nav"))
+        ) return el;
+        el = el.parentElement;
+      }
+      return null;
     }
 
-    function onLeaveMagnetic() {
-      const el = activeElRef.current;
-      if (el) {
-        el.style.transition = "transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)";
-        el.style.transform = "";
-        setTimeout(() => { if (el) el.style.transition = ""; }, 300);
+    function onMouseOver(e: MouseEvent) {
+      const mag = getMagnetic(e.target);
+      if (mag && mag !== activeElRef.current) {
+        // If this element was springing back, cancel that
+        if (mag === springElRef.current) {
+          springElRef.current = null;
+        }
+        activeElRef.current = mag;
       }
-      activeElRef.current = null;
+    }
+
+    function onMouseOut(e: MouseEvent) {
+      const mag = getMagnetic(e.target);
+      if (mag && mag === activeElRef.current) {
+        const related = getMagnetic(e.relatedTarget);
+        if (related !== mag) {
+          // Hand off to spring-back — don't reset transform here
+          springElRef.current = mag;
+          activeElRef.current = null;
+        }
+      }
     }
 
     function animate() {
@@ -44,19 +69,26 @@ export default function Cursor() {
       const my = mouseRef.current.y;
       const el = activeElRef.current;
 
-      if (el) {
+      // Clear ref if element was removed from DOM
+      if (el && !el.isConnected) {
+        activeElRef.current = null;
+      }
+
+      if (el && el.isConnected) {
         const rect = el.getBoundingClientRect();
         const elCx = rect.left + rect.width / 2;
         const elCy = rect.top + rect.height / 2;
 
-        // Magnetic pull
-        const pullX = (mx - elCx) * 0.15;
-        const pullY = (my - elCy) * 0.15;
+        const pullX = (mx - elCx) * PULL_STRENGTH;
+        const pullY = (my - elCy) * PULL_STRENGTH;
         el.style.transition = "none";
-        el.style.transform = `translate(${pullX}px, ${pullY}px) scale(1.04)`;
+        el.style.transform = `translate(${pullX}px, ${pullY}px) scale(${BUTTON_SCALE})`;
+
+        // Store current pull so spring-back can start from here
+        springPullRef.current = { x: pullX, y: pullY, scale: BUTTON_SCALE };
 
         // Morph cursor to button shape
-        morphRef.current = Math.min(1, morphRef.current + 0.13);
+        morphRef.current = Math.min(1, morphRef.current + MORPH_IN_SPEED);
         const m = morphRef.current;
 
         const pad = 6;
@@ -65,10 +97,8 @@ export default function Cursor() {
         const w = CURSOR_SIZE + (targetW - CURSOR_SIZE) * m;
         const h = CURSOR_SIZE + (targetH - CURSOR_SIZE) * m;
 
-        // Compute target border radius from the element
         const computedRadius = getComputedStyle(el).borderRadius;
         const targetRadius = parseFloat(computedRadius) || 12;
-        // Interpolate: circle uses min(w,h)/2 as radius, target uses element's radius
         const circleRadius = Math.min(w, h) / 2;
         const r = circleRadius + (targetRadius + pad / 2 - circleRadius) * m;
 
@@ -77,16 +107,34 @@ export default function Cursor() {
         outer!.style.width = `${w}px`;
         outer!.style.height = `${h}px`;
         outer!.style.borderRadius = `${r}px`;
-        // Morphed state: subtle frosted glass highlight
-        outer!.style.background = `rgba(200, 200, 210, ${0.01 + m * 0.12})`;
+        outer!.style.background = `rgba(200, 200, 210, ${0.01 + m * 0.06})`;
         outer!.style.border = `1px solid rgba(255, 255, 255, ${0.1 + m * 0.35})`;
         outer!.style.boxShadow = m > 0.5
-          ? `0 4px 20px rgba(0, 0, 0, ${m * 0.06}), inset 0 1px 0 rgba(255, 255, 255, ${m * 0.4})`
+          ? `0 4px 20px rgba(0, 0, 0, ${m * 0.04}), inset 0 1px 0 rgba(255, 255, 255, ${m * 0.4})`
           : "none";
-        outer!.style.mixBlendMode = "multiply";
+        outer!.style.mixBlendMode = "normal";
       } else {
-        // Decay to free cursor
-        morphRef.current = Math.max(0, morphRef.current - 0.16);
+        // Spring back the previously-hovered button
+        const sEl = springElRef.current;
+        if (sEl && sEl.isConnected) {
+          const sp = springPullRef.current;
+          sp.x *= (1 - SPRING_BACK_SPEED);
+          sp.y *= (1 - SPRING_BACK_SPEED);
+          sp.scale = 1 + (sp.scale - 1) * (1 - SPRING_BACK_SPEED);
+
+          if (Math.abs(sp.x) < 0.1 && Math.abs(sp.y) < 0.1) {
+            sEl.style.transform = "";
+            springElRef.current = null;
+          } else {
+            sEl.style.transition = "none";
+            sEl.style.transform = `translate(${sp.x}px, ${sp.y}px) scale(${sp.scale})`;
+          }
+        } else {
+          springElRef.current = null;
+        }
+
+        // Decay cursor to free state
+        morphRef.current = Math.max(0, morphRef.current - MORPH_OUT_SPEED);
         const m = morphRef.current;
         const size = CURSOR_SIZE + m * 8;
 
@@ -104,38 +152,16 @@ export default function Cursor() {
       rafRef.current = requestAnimationFrame(animate);
     }
 
-    function setupListeners() {
-      const magnetics = document.querySelectorAll<HTMLElement>(
-        '[data-magnetic], nav a, button'
-      );
-      magnetics.forEach((el) => {
-        el.addEventListener("mouseenter", onEnterMagnetic);
-        el.addEventListener("mouseleave", onLeaveMagnetic);
-      });
-      return magnetics;
-    }
-
     window.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseover", onMouseOver);
+    document.addEventListener("mouseout", onMouseOut);
     rafRef.current = requestAnimationFrame(animate);
-
-    let elements = setupListeners();
-    const observer = new MutationObserver(() => {
-      elements.forEach((el) => {
-        el.removeEventListener("mouseenter", onEnterMagnetic);
-        el.removeEventListener("mouseleave", onLeaveMagnetic);
-      });
-      elements = setupListeners();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
 
     return () => {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("mousemove", onMouseMove);
-      elements.forEach((el) => {
-        el.removeEventListener("mouseenter", onEnterMagnetic);
-        el.removeEventListener("mouseleave", onLeaveMagnetic);
-      });
-      observer.disconnect();
+      document.removeEventListener("mouseover", onMouseOver);
+      document.removeEventListener("mouseout", onMouseOut);
     };
   }, []);
 
@@ -152,8 +178,6 @@ export default function Cursor() {
         transform: "translate(-50%, -50%)",
         left: -100,
         top: -100,
-        backdropFilter: "blur(4px)",
-        WebkitBackdropFilter: "blur(4px)",
         willChange: "left, top, width, height, border-radius, background",
       }}
     />
