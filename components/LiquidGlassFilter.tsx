@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
  * Returns a base64 data URL for use in feImage.
  */
 function generateLensMap(): string {
-  const size = 128;
+  const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -32,11 +32,11 @@ function generateLensMap(): string {
       if (nx < 0.3) {
         const t = 1 - nx / 0.3; // 1 at edge, 0 at 30%
         const eased = t * t * (3 - 2 * t); // smoothstep
-        r = 128 + eased * 40;
+        r = 128 + eased * 80;
       } else if (nx > 0.7) {
         const t = (nx - 0.7) / 0.3; // 0 at 70%, 1 at edge
         const eased = t * t * (3 - 2 * t);
-        r = 128 - eased * 40;
+        r = 128 - eased * 80;
       }
 
       // Vertical displacement (G channel) — same logic
@@ -44,11 +44,11 @@ function generateLensMap(): string {
       if (ny < 0.3) {
         const t = 1 - ny / 0.3;
         const eased = t * t * (3 - 2 * t);
-        g = 128 + eased * 40;
+        g = 128 + eased * 80;
       } else if (ny > 0.7) {
         const t = (ny - 0.7) / 0.3;
         const eased = t * t * (3 - 2 * t);
-        g = 128 - eased * 40;
+        g = 128 - eased * 80;
       }
 
       const i = (y * size + x) * 4;
@@ -81,16 +81,16 @@ export default function LiquidGlassFilter() {
         {/*
           liquid-glass filter pipeline:
           1. feImage — loads the canvas-generated lens displacement map (PNG)
-          2. feDisplacementMap — warps backdrop pixels using R/G channels
+          2. feDisplacementMap — warps the element using R/G channels
              (content bends inward at all four edges, undistorted in center)
           3. feGaussianBlur — light frosted glass softening
         */}
         <filter
           id="liquid-glass"
-          x="-5%"
-          y="-5%"
-          width="110%"
-          height="110%"
+          x="-10%"
+          y="-10%"
+          width="120%"
+          height="120%"
           colorInterpolationFilters="sRGB"
         >
           {/* Displacement map (or neutral fallback before canvas generates) */}
@@ -108,14 +108,30 @@ export default function LiquidGlassFilter() {
           <feDisplacementMap
             in="SourceGraphic"
             in2="map"
-            scale="55"
+            scale="80"
             xChannelSelector="R"
             yChannelSelector="G"
             result="refracted"
           />
 
-          {/* Frosted-glass softening */}
-          <feGaussianBlur in="refracted" stdDeviation="3" />
+          {/* Frosted-glass softening — mild blur keeps edges readable */}
+          <feGaussianBlur in="refracted" stdDeviation="1.5" result="blurred" />
+
+          {/* Slight brightness boost to simulate transmitted light through glass */}
+          <feComponentTransfer in="blurred">
+            <feFuncR type="linear" slope="1.05" intercept="0.02" />
+            <feFuncG type="linear" slope="1.05" intercept="0.02" />
+            <feFuncB type="linear" slope="1.08" intercept="0.03" />
+          </feComponentTransfer>
+        </filter>
+
+        {/*
+          liquid-glass-edge: lightweight filter applied only to the specular
+          highlight overlay so it softens naturally at boundaries.
+        */}
+        <filter id="liquid-glass-glow" x="-5%" y="-5%" width="110%" height="110%">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
       </defs>
     </svg>
