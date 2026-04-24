@@ -14,29 +14,32 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
     <motion.div
       layoutId={`card-${project.slug}`}
       onClick={onClick}
-      className={`glass glass-hover rounded-2xl p-6 cursor-pointer ${
-        project.featured ? "md:col-span-2" : ""
-      }`}
+      className="glass card-hover rounded-2xl p-5 cursor-pointer h-full flex flex-col"
       style={{ borderRadius: 16 }}
+      transition={{ layout: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } }}
     >
-      <motion.div layoutId={`card-content-${project.slug}`}>
-        {/* Thumbnail placeholder */}
-        <div className="w-full h-32 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 mb-4" />
-        <motion.h3
-          layoutId={`card-title-${project.slug}`}
-          className="text-xl font-bold text-slate-900"
-        >
+      {/* Thumbnail placeholder — takes remaining space */}
+      <div className="flex-1 min-h-0 rounded-xl bg-gradient-to-br from-slate-50/80 to-slate-100/60 mb-4" />
+
+      {/* Text content pinned to bottom */}
+      <div className="shrink-0">
+        <h3 className="text-lg font-bold text-slate-900 leading-tight">
           {project.title}
-        </motion.h3>
-        <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+        </h3>
+        <p className="mt-1.5 text-sm text-slate-500 leading-relaxed line-clamp-2">
           {project.description}
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {project.tech.map((t) => (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {project.tech.slice(0, 3).map((t) => (
             <TechPill key={t} label={t} />
           ))}
+          {project.tech.length > 3 && (
+            <span className="text-xs text-slate-400 self-center">
+              +{project.tech.length - 3}
+            </span>
+          )}
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }

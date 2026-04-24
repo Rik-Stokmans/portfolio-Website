@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import DotGrid from "@/components/DotGrid";
+import Cursor from "@/components/Cursor";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,7 +21,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans`}>{children}</body>
+      <body className={`${inter.variable} font-sans`}>
+        <DotGrid />
+        <div className="relative" style={{ zIndex: 1 }}>
+          {children}
+        </div>
+        <Cursor />
+      </body>
     </html>
   );
 }

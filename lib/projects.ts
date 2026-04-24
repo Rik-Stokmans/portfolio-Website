@@ -6,7 +6,8 @@ export interface Project {
   tech: string[];
   liveUrl?: string;
   githubUrl?: string;
-  featured: boolean;
+  /** Grid span: "2x1" = 2 cols, 1 row. "1x2" = 1 col, 2 rows. "1x1" = default. */
+  gridSize: "1x1" | "2x1" | "1x2";
 }
 
 export const projects: Project[] = [
@@ -19,7 +20,7 @@ export const projects: Project[] = [
     tech: ["React", "TypeScript", "D3.js", "WebSocket"],
     liveUrl: "https://example.com",
     githubUrl: "https://github.com",
-    featured: true,
+    gridSize: "2x1",
   },
   {
     slug: "ai-code-review",
@@ -30,7 +31,7 @@ export const projects: Project[] = [
     tech: ["Python", "FastAPI", "LangChain", "PostgreSQL"],
     liveUrl: "https://example.com",
     githubUrl: "https://github.com",
-    featured: true,
+    gridSize: "1x2",
   },
   {
     slug: "design-system",
@@ -40,7 +41,7 @@ export const projects: Project[] = [
       "A comprehensive design system with 40+ components, full WCAG 2.1 AA compliance, and runtime theme switching. Supports light/dark modes and custom brand themes. Published as an npm package with tree-shaking support.",
     tech: ["React", "Storybook", "CSS Variables", "Jest"],
     githubUrl: "https://github.com",
-    featured: false,
+    gridSize: "1x1",
   },
   {
     slug: "task-engine",
@@ -50,7 +51,7 @@ export const projects: Project[] = [
       "A high-throughput distributed task processing engine. Supports delayed execution, retries with exponential backoff, dead letter queues, and real-time observability via OpenTelemetry. Processes 10k+ tasks per minute.",
     tech: ["Go", "Redis", "gRPC", "Prometheus"],
     githubUrl: "https://github.com",
-    featured: false,
+    gridSize: "1x1",
   },
   {
     slug: "markdown-editor",
@@ -60,7 +61,7 @@ export const projects: Project[] = [
       "A real-time collaborative Markdown editor with live preview, syntax highlighting, and a plugin system. Supports custom renderers, keyboard shortcuts, and exports to PDF/HTML. Built with operational transforms for conflict-free editing.",
     tech: ["TypeScript", "ProseMirror", "Node.js", "Y.js"],
     liveUrl: "https://example.com",
-    featured: false,
+    gridSize: "2x1",
   },
 ];
 

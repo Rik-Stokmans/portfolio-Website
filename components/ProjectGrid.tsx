@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { projects } from "@/lib/projects";
 import ProjectCard from "./ProjectCard";
 import ProjectOverlay from "./ProjectOverlay";
@@ -36,6 +36,17 @@ export default function ProjectGrid() {
     window.history.pushState({}, "", "/");
   }, []);
 
+  // Handle browser back button
+  useEffect(() => {
+    function onPopState() {
+      if (window.location.pathname === "/") {
+        setSelected(null);
+      }
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   return (
     <section id="projects" className="px-6 pb-24 max-w-6xl mx-auto">
       <motion.h2
@@ -48,25 +59,31 @@ export default function ProjectGrid() {
         Projects
       </motion.h2>
 
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        variants={gridContainer}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: "-100px" }}
-      >
-        {projects.map((project) => (
-          <motion.div key={project.slug} variants={gridItem}>
-            <ProjectCard project={project} onClick={() => openProject(project)} />
-          </motion.div>
-        ))}
-      </motion.div>
+      <LayoutGroup>
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[280px]"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-100px" }}
+        >
+          {projects.map((project) => (
+            <motion.div
+              key={project.slug}
+              variants={gridItem}
+              className={`${project.gridSize === "2x1" ? "md:col-span-2" : ""} ${project.gridSize === "1x2" ? "md:row-span-2" : ""}`}
+            >
+              <ProjectCard project={project} onClick={() => openProject(project)} />
+            </motion.div>
+          ))}
+        </motion.div>
 
-      <AnimatePresence>
-        {selected && (
-          <ProjectOverlay project={selected} onClose={closeProject} />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {selected && (
+            <ProjectOverlay project={selected} onClose={closeProject} />
+          )}
+        </AnimatePresence>
+      </LayoutGroup>
     </section>
   );
 }

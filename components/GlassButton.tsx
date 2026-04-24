@@ -12,18 +12,18 @@ export default function GlassButton({
   external,
 }: GlassButtonProps) {
   const className =
-    "glass glass-hover rounded-xl px-5 py-2.5 text-sm font-medium text-slate-700 inline-block";
+    "glass rounded-xl px-5 py-2.5 text-sm font-medium text-slate-700 inline-block";
 
   if (external) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className} data-magnetic>
         {children}
       </a>
     );
   }
 
   return (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} data-magnetic>
       {children}
     </Link>
   );
