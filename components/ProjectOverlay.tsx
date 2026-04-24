@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { motion, useAnimation } from "framer-motion";
+import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import type { Project } from "@/lib/projects";
 import TechPill from "./TechPill";
 import GlassButton from "./GlassButton";
@@ -11,53 +11,60 @@ interface ProjectOverlayProps {
   onClose: () => void;
 }
 
-// Animation config — close is the exact inverse of open but faster
-const OPEN_STAGGER = 0.06; // delay between each content item on open
-const OPEN_DURATION = 0.3; // each item's fade-in duration
-const OPEN_CONTENT_DELAY = 0.3; // wait for box morph before content appears
+// ── Animation design ──────────────────────────────────────────────
+//
+// OPEN (what the user already likes):
+//   1. Box morphs from card tile → full screen (0.4s, ease)
+//   2. Content appears top → bottom, staggered:
+//      Each item: opacity 0→1, y 12→0, easeOut, 0.3s, 60ms stagger
+//      First content delay: 0.3s (waits for box morph)
+//
+// CLOSE (exact inverse, slightly faster):
+//   1. Content disappears bottom → top, staggered:
+//      Each item: opacity 1→0, y 0→12 (slides BACK DOWN where it came from)
+//      easeIn (accelerates away — mirror of easeOut), 0.2s, 45ms stagger
+//   2. After content fully gone, box morphs full screen → card tile (0.4s)
+//
+// The y direction on close is +12 (down), NOT -12 (up). This is what
+// makes it feel like a true rewind rather than a different animation.
+// ──────────────────────────────────────────────────────────────────
 
-const CLOSE_STAGGER = 0.04; // slightly faster stagger on close
-const CLOSE_DURATION = 0.18; // faster fade-out
-const CLOSE_TOTAL_ITEMS = 6; // back button + 5 content items
-const CLOSE_CONTENT_TIME = CLOSE_STAGGER * (CLOSE_TOTAL_ITEMS - 1) + CLOSE_DURATION; // ~0.38s
+const ITEMS_COUNT = 6; // back btn + title + desc + tech + links + screenshot
+const OPEN_DELAY_BASE = 0.3;
+const OPEN_STAGGER = 0.06;
+const OPEN_DURATION = 0.3;
 
-const EASE_OUT = [0, 0, 0.2, 1] as const;
-const EASE_IN = [0.4, 0, 1, 1] as const;
+const CLOSE_STAGGER = 0.045;
+const CLOSE_DURATION = 0.2;
+// Total time for all content to fade: last item delay + its duration
+const CLOSE_TOTAL = (ITEMS_COUNT - 1) * CLOSE_STAGGER + CLOSE_DURATION; // ~0.425s
 
 export default function ProjectOverlay({
   project,
   onClose,
 }: ProjectOverlayProps) {
-  const [isClosing, setIsClosing] = useState(false);
+  const [phase, setPhase] = useState<"open" | "closing">("open");
 
   const handleClose = useCallback(() => {
-    if (isClosing) return;
-    setIsClosing(true);
-    // Wait for content to fully fade out, then unmount to trigger layoutId morph back
-    setTimeout(onClose, CLOSE_CONTENT_TIME * 1000 + 30);
-  }, [isClosing, onClose]);
+    if (phase === "closing") return;
+    setPhase("closing");
+    // After content fades out, unmount → triggers layoutId reverse morph
+    setTimeout(onClose, CLOSE_TOTAL * 1000 + 20);
+  }, [phase, onClose]);
 
-  // Content items with their open/close delay indices
-  // Open: top to bottom (title first, screenshot last)
-  // Close: bottom to top (screenshot first, title last) — exact inverse
-  const contentItems = useMemo(() => [
-    { id: "back", openIndex: 0, closeIndex: 5 },
-    { id: "title", openIndex: 1, closeIndex: 4 },
-    { id: "desc", openIndex: 2, closeIndex: 3 },
-    { id: "tech", openIndex: 3, closeIndex: 2 },
-    { id: "links", openIndex: 4, closeIndex: 1 },
-    { id: "screenshot", openIndex: 5, closeIndex: 0 },
-  ], []);
-
-  function getAnimate(openIndex: number, closeIndex: number) {
-    if (isClosing) {
+  // Each content item gets an index (0 = back button at top, 5 = screenshot at bottom)
+  // Open: index 0 animates first (top → bottom)
+  // Close: index 5 animates first (bottom → top) — exact reverse
+  function itemAnimate(index: number) {
+    if (phase === "closing") {
+      const reverseIndex = ITEMS_COUNT - 1 - index; // 5→0, 4→1, etc.
       return {
         opacity: 0,
-        y: -12,
+        y: 12, // slides back DOWN (where it originally came from)
         transition: {
           duration: CLOSE_DURATION,
-          delay: closeIndex * CLOSE_STAGGER,
-          ease: EASE_IN,
+          delay: reverseIndex * CLOSE_STAGGER,
+          ease: [0.4, 0, 1, 1] as const, // easeIn — mirror of easeOut
         },
       };
     }
@@ -66,8 +73,8 @@ export default function ProjectOverlay({
       y: 0,
       transition: {
         duration: OPEN_DURATION,
-        delay: OPEN_CONTENT_DELAY + openIndex * OPEN_STAGGER,
-        ease: EASE_OUT,
+        delay: OPEN_DELAY_BASE + index * OPEN_STAGGER,
+        ease: [0, 0, 0.2, 1] as const, // easeOut
       },
     };
   }
@@ -78,9 +85,9 @@ export default function ProjectOverlay({
       <motion.div
         className="fixed inset-0 z-40 bg-white/60 backdrop-blur-sm"
         initial={{ opacity: 0 }}
-        animate={{ opacity: isClosing ? 0 : 1 }}
+        animate={{ opacity: phase === "closing" ? 0 : 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: isClosing ? 0.35 : 0.25 }}
+        transition={{ duration: phase === "closing" ? CLOSE_TOTAL : 0.25 }}
         onClick={handleClose}
       />
 
@@ -91,16 +98,13 @@ export default function ProjectOverlay({
         style={{ borderRadius: 24 }}
         transition={{ layout: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } }}
       >
-        {/* Back button */}
+        {/* Back button (index 0) */}
         <div className="sticky top-0 z-10 p-4 sm:p-6">
           <motion.button
             onClick={handleClose}
             className="glass rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
             initial={{ opacity: 0, y: -8 }}
-            animate={getAnimate(
-              contentItems[0].openIndex,
-              contentItems[0].closeIndex
-            )}
+            animate={itemAnimate(0)}
           >
             &larr; Back
           </motion.button>
@@ -108,48 +112,40 @@ export default function ProjectOverlay({
 
         {/* Detail content */}
         <div className="px-6 sm:px-12 pb-12 max-w-3xl mx-auto">
+          {/* Title (index 1) */}
           <motion.h1
             className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight"
             initial={{ opacity: 0, y: 12 }}
-            animate={getAnimate(
-              contentItems[1].openIndex,
-              contentItems[1].closeIndex
-            )}
+            animate={itemAnimate(1)}
           >
             {project.title}
           </motion.h1>
 
+          {/* Description (index 2) */}
           <motion.p
             className="mt-6 text-lg text-slate-500 leading-relaxed"
             initial={{ opacity: 0, y: 12 }}
-            animate={getAnimate(
-              contentItems[2].openIndex,
-              contentItems[2].closeIndex
-            )}
+            animate={itemAnimate(2)}
           >
             {project.longDescription}
           </motion.p>
 
+          {/* Tech pills (index 3) */}
           <motion.div
             className="mt-8 flex flex-wrap gap-2"
             initial={{ opacity: 0, y: 12 }}
-            animate={getAnimate(
-              contentItems[3].openIndex,
-              contentItems[3].closeIndex
-            )}
+            animate={itemAnimate(3)}
           >
             {project.tech.map((t) => (
               <TechPill key={t} label={t} />
             ))}
           </motion.div>
 
+          {/* Links (index 4) */}
           <motion.div
             className="mt-8 flex gap-4"
             initial={{ opacity: 0, y: 12 }}
-            animate={getAnimate(
-              contentItems[4].openIndex,
-              contentItems[4].closeIndex
-            )}
+            animate={itemAnimate(4)}
           >
             {project.liveUrl && (
               <GlassButton href={project.liveUrl} external>
@@ -163,14 +159,11 @@ export default function ProjectOverlay({
             )}
           </motion.div>
 
-          {/* Screenshot placeholder */}
+          {/* Screenshot placeholder (index 5) */}
           <motion.div
             className="mt-12 w-full h-64 sm:h-80 rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100"
             initial={{ opacity: 0, y: 12 }}
-            animate={getAnimate(
-              contentItems[5].openIndex,
-              contentItems[5].closeIndex
-            )}
+            animate={itemAnimate(5)}
           />
         </div>
       </motion.div>
