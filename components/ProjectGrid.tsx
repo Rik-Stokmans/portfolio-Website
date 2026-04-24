@@ -23,6 +23,17 @@ const gridItem = {
   },
 };
 
+function gridClasses(size: string): string {
+  switch (size) {
+    case "1x2":
+      return "md:row-span-2";
+    case "2x2":
+      return "md:col-span-2 md:row-span-2";
+    default:
+      return "";
+  }
+}
+
 export default function ProjectGrid() {
   const [selected, setSelected] = useState<Project | null>(null);
 
@@ -36,7 +47,6 @@ export default function ProjectGrid() {
     window.history.pushState({}, "", "/");
   }, []);
 
-  // Handle browser back button
   useEffect(() => {
     function onPopState() {
       if (window.location.pathname === "/") {
@@ -71,7 +81,7 @@ export default function ProjectGrid() {
             <motion.div
               key={project.slug}
               variants={gridItem}
-              className={`${project.gridSize === "2x1" ? "md:col-span-2" : ""} ${project.gridSize === "1x2" ? "md:row-span-2" : ""}`}
+              className={gridClasses(project.gridSize)}
             >
               <ProjectCard project={project} onClick={() => openProject(project)} />
             </motion.div>

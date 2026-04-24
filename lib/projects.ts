@@ -6,8 +6,8 @@ export interface Project {
   tech: string[];
   liveUrl?: string;
   githubUrl?: string;
-  /** Grid span: "2x1" = 2 cols, 1 row. "1x2" = 1 col, 2 rows. "1x1" = default. */
-  gridSize: "1x1" | "2x1" | "1x2";
+  /** Grid span: "1x1" = default, "1x2" = 1 col 2 rows tall, "2x2" = 2 cols 2 rows */
+  gridSize: "1x1" | "1x2" | "2x2";
 }
 
 export const projects: Project[] = [
@@ -20,7 +20,7 @@ export const projects: Project[] = [
     tech: ["React", "TypeScript", "D3.js", "WebSocket"],
     liveUrl: "https://example.com",
     githubUrl: "https://github.com",
-    gridSize: "2x1",
+    gridSize: "2x2",
   },
   {
     slug: "ai-code-review",
@@ -61,7 +61,7 @@ export const projects: Project[] = [
       "A real-time collaborative Markdown editor with live preview, syntax highlighting, and a plugin system. Supports custom renderers, keyboard shortcuts, and exports to PDF/HTML. Built with operational transforms for conflict-free editing.",
     tech: ["TypeScript", "ProseMirror", "Node.js", "Y.js"],
     liveUrl: "https://example.com",
-    gridSize: "2x1",
+    gridSize: "1x1",
   },
 ];
 

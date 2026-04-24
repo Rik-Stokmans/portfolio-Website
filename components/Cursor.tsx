@@ -2,20 +2,14 @@
 
 import { useEffect, useRef } from "react";
 
-// The cursor smoothly morphs as it approaches magnetic elements.
-// When hovering a magnetic button, it snaps to the button's shape,
-// the button scales up and follows the mouse magnetically.
-// Project cards are NOT magnetic — cursor stays as a circle over them.
-
 const CURSOR_SIZE = 20;
-const MAGNETIC_RANGE = 60; // px from button edge where morph begins
 
 export default function Cursor() {
   const outerRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
   const mouseRef = useRef({ x: -100, y: -100 });
   const activeElRef = useRef<HTMLElement | null>(null);
-  const morphRef = useRef(0); // 0 = circle, 1 = fully morphed
+  const morphRef = useRef(0);
 
   useEffect(() => {
     const outer = outerRef.current;
@@ -25,7 +19,6 @@ export default function Cursor() {
       mouseRef.current = { x: e.clientX, y: e.clientY };
     }
 
-    // Track which magnetic element the mouse is actually inside
     function onEnterMagnetic(e: Event) {
       activeElRef.current = e.currentTarget as HTMLElement;
     }
@@ -33,13 +26,11 @@ export default function Cursor() {
     function onLeaveMagnetic() {
       const el = activeElRef.current;
       if (el) {
-        // Reset the button transform smoothly
-        el.style.transition = "transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1)";
+        el.style.transition = "transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)";
         el.style.transform = "";
-        // Clean up transition after it completes
         setTimeout(() => {
           if (el) el.style.transition = "";
-        }, 350);
+        }, 300);
       }
       activeElRef.current = null;
     }
@@ -50,42 +41,42 @@ export default function Cursor() {
       const el = activeElRef.current;
 
       if (el) {
-        // Mouse is inside a magnetic element
         const rect = el.getBoundingClientRect();
         const elCx = rect.left + rect.width / 2;
         const elCy = rect.top + rect.height / 2;
 
-        // Magnetic pull: button follows mouse with damping
-        const pullX = (mx - elCx) * 0.25;
-        const pullY = (my - elCy) * 0.25;
+        // Magnetic pull on the button
+        const pullX = (mx - elCx) * 0.2;
+        const pullY = (my - elCy) * 0.2;
         el.style.transition = "none";
-        el.style.transform = `translate(${pullX}px, ${pullY}px) scale(1.06)`;
+        el.style.transform = `translate(${pullX}px, ${pullY}px) scale(1.05)`;
 
-        // Morph cursor toward button shape
-        morphRef.current = Math.min(1, morphRef.current + 0.12);
+        // Cursor morphs to a subtle highlight ring around center of button
+        // Much smaller than the button — acts as a focus indicator
+        morphRef.current = Math.min(1, morphRef.current + 0.15);
         const m = morphRef.current;
-        const w = rect.width + 16; // slightly larger than button
-        const h = rect.height + 12;
+
+        // Morph to a slightly larger circle that sits behind the button
+        const targetSize = Math.min(rect.width, rect.height) * 0.5;
+        const size = CURSOR_SIZE + (targetSize - CURSOR_SIZE) * m;
 
         outer!.style.left = `${elCx + pullX}px`;
         outer!.style.top = `${elCy + pullY}px`;
-        outer!.style.width = `${CURSOR_SIZE + (w - CURSOR_SIZE) * m}px`;
-        outer!.style.height = `${CURSOR_SIZE + (h - CURSOR_SIZE) * m}px`;
-        outer!.style.borderRadius = `${50 - m * 38}%`; // 50% circle -> 12% rounded rect
-        outer!.style.opacity = `${0.6 + m * 0.4}`;
-        outer!.style.background = `rgba(0, 0, 0, ${0.03 + m * 0.02})`;
-        outer!.style.borderColor = `rgba(0, 0, 0, ${0.12 - m * 0.06})`;
+        outer!.style.width = `${size}px`;
+        outer!.style.height = `${size}px`;
+        outer!.style.borderRadius = "50%";
+        outer!.style.background = `rgba(0, 0, 0, ${0.04 * m})`;
+        outer!.style.borderColor = `rgba(0, 0, 0, ${0.12 - m * 0.08})`;
       } else {
-        // Normal cursor — decay morph back to circle
-        morphRef.current = Math.max(0, morphRef.current - 0.15);
+        morphRef.current = Math.max(0, morphRef.current - 0.18);
         const m = morphRef.current;
+        const size = CURSOR_SIZE + m * 10;
 
         outer!.style.left = `${mx}px`;
         outer!.style.top = `${my}px`;
-        outer!.style.width = `${CURSOR_SIZE + m * 30}px`;
-        outer!.style.height = `${CURSOR_SIZE + m * 20}px`;
-        outer!.style.borderRadius = `${50 - m * 38}%`;
-        outer!.style.opacity = "1";
+        outer!.style.width = `${size}px`;
+        outer!.style.height = `${size}px`;
+        outer!.style.borderRadius = "50%";
         outer!.style.background = "rgba(0, 0, 0, 0.05)";
         outer!.style.borderColor = "rgba(0, 0, 0, 0.12)";
       }
@@ -94,7 +85,6 @@ export default function Cursor() {
     }
 
     function setupListeners() {
-      // Only select actual buttons and links — NOT project cards
       const magnetics = document.querySelectorAll<HTMLElement>(
         '[data-magnetic], nav a, button'
       );
@@ -144,7 +134,7 @@ export default function Cursor() {
         top: -100,
         backdropFilter: "blur(4px)",
         WebkitBackdropFilter: "blur(4px)",
-        willChange: "left, top, width, height, border-radius",
+        willChange: "left, top, width, height",
       }}
     />
   );
